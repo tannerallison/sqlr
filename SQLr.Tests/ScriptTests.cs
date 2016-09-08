@@ -1,30 +1,43 @@
 ﻿using NUnit.Framework;
-using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace SQLr.Tests
 {
-
-
 	[TestFixture]
 	public class ScriptTests
 	{
-		private string directory;
-
-		[OneTimeSetUp]
-		public void OneTimeSetUp()
+		[SetUp]
+		public void SetUp()
 		{
-			directory = Path.GetDirectoryName(Path.GetTempFileName());
+			_directory = Path.Combine(Path.GetTempPath(), "SQLrTesting");
+
+			Directory.CreateDirectory(_directory);
 		}
 
-		[OneTimeTearDown]
-		public void OneTimeTearDown()
+		[TearDown]
+		public void TearDown()
 		{
-			foreach (string file in Directory.EnumerateFiles(directory))
-			{
-				if (new FileInfo(file).CreationTime > DateTime.Now.AddHours(-2))
-					File.Delete(file);
-			}
+			Directory.Delete(_directory, true);
+		}
+
+		private string _directory;
+
+		[TestCase("VariableA")]
+		[TestCase("12345")]
+		[TestCase("Variable_123")]
+		[TestCase("?#$?")]
+		public void QueryStringReplaceTest(string variableName)
+		{
+			var filePath = Path.Combine(_directory, "_123_testFile.sql");
+
+			File.WriteAllText(filePath, $"Test variableA: <<{variableName}>>");
+
+			var script = new Script(filePath);
+
+			var query = script.GetVariableReplacedQuery(new Dictionary<string, string> {{variableName, "Test1"}});
+
+			Assert.That(query, Is.EqualTo("Test variableA: Test1"));
 		}
 
 		[TestCase("_123_TestCase.sql", 123)]
@@ -34,7 +47,7 @@ namespace SQLr.Tests
 		[TestCase("_999999999999999_TestCase.sql", 999999999999999)]
 		public void TestOrdinalValues(string fileName, long ordinalValue)
 		{
-			var filePath = Path.Combine(directory, fileName);
+			var filePath = Path.Combine(_directory, fileName);
 
 			File.WriteAllText(filePath, "This is a test string");
 
@@ -50,15 +63,11 @@ namespace SQLr.Tests
 		[TestCase("_-12_TestCase.sql")]
 		public void TestCreateWithBadFileNames(string fileName)
 		{
-			var badFilePath = Path.Combine(directory, fileName);
+			var badFilePath = Path.Combine(_directory, fileName);
 
 			File.WriteAllText(badFilePath, "This is a test string");
 			Script script;
-			Assert.That(() =>
-			{
-				script = new Script(badFilePath);
-			}, Throws.ArgumentException);
+			Assert.That(() => { script = new Script(badFilePath); }, Throws.ArgumentException);
 		}
-		
 	}
 }
