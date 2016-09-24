@@ -7,132 +7,146 @@ namespace SQLr.Tests
     [TestFixture]
     public class ScriptTests
     {
-        [SetUp]
-        public void SetUp()
+        public class SettingTextUpdatesFields
         {
-            _directory = Path.Combine(Path.GetTempPath(), "SQLrTesting");
+            private Script script;
 
-            Directory.CreateDirectory(_directory);
+            private string testVariable = "TestVar";
+            private string testSubset = "TestSubset";
+            private string warningMessage = "This is the message";
+            private int timeout = 23;
+            private string database = "TestDB";
+
+            [OneTimeSetUp]
+            public void OneTimeSetUp()
+            {
+                script = new Script();
+
+                string text = $"<<{testVariable}>> " +
+                    $"{{{{Subset={testSubset}}}}} " +
+                    $"{{{{Warning={warningMessage}}}}} " +
+                    $"{{{{Timeout={timeout}}}}} " +
+                    $"{{{{Database={database}}}}} ";
+
+                script.Text = text;
+            }
+
+            [Test]
+            public void Setting_Text_Updates_Variables()
+            {
+                Assert.That(script.Variables, Has.Member(testVariable));
+            }
+
+            [Test]
+            public void Setting_Text_Updates_Subsets()
+            {
+                Assert.That(script.GetSubsets(), Has.Member(testSubset));
+            }
+
+            [Test]
+            public void Setting_Text_Updates_Warning()
+            {
+                Assert.That(script.GetWarning(), Is.EqualTo(warningMessage));
+            }
+
+            [Test]
+            public void Setting_Text_Updates_Timeout()
+            {
+                Assert.That(script.GetTimeout(), Is.EqualTo(timeout));
+            }
+
+            [Test]
+            public void Setting_Text_Updates_Database()
+            {
+                Assert.That(script.GetDatabase(), Is.EqualTo(database));
+            }
         }
 
-        [TearDown]
-        public void TearDown()
+        public class SettingFilePathUpdatesFields
         {
-            Directory.Delete(_directory, true);
-        }
+            private string _directory;
+            private static long ord = 123;
+            private string name = "FilePathTests";
 
-        private string _directory;
+            [OneTimeSetUp]
+            public void OneTimeSetUp()
+            {
+                _directory = Path.Combine(Path.GetTempPath(), "SettingFilePathUpdatesFieldTests");
 
-        [Test]
-        public void Setting_Text_Updates_Variables()
-        {
-            var script = new Script();
+                if (!Directory.Exists(_directory))
+                    Directory.CreateDirectory(_directory);
+            }
 
-            string testVariable = "TestVar";
-            string text = $"<<{testVariable}>>";
+            [OneTimeTearDown]
+            public void OneTimeTearDown()
+            {
+                Directory.Delete(_directory, true);
+            }
 
-            script.Text = text;
+            [Test]
+            public void Setting_FilePath_Updates_Text()
+            {
+                string scriptText = "This is a test file";
 
-            Assert.That(script.Variables, Has.Member(testVariable));
-        }
+                var filePath = Path.Combine(_directory, $"_{++ord}_{name}.sql");
+                File.WriteAllText(filePath, scriptText);
+                var script = new Script();
+                script.FilePath = filePath;
 
-        [Test]
-        public void Setting_Text_Updates_Subsets()
-        {
-            var script = new Script();
+                Assert.That(script.Text, Is.EqualTo(scriptText));
+            }
 
-            string testSubset = "TestSubset";
-            string text = $"{{{{Subset={testSubset}}}}}";
+            [Test]
+            public void Setting_FilePath_Updates_Name()
+            {
+                string scriptText = "This is a test file";
 
-            script.Text = text;
+                var filePath = Path.Combine(_directory, $"_{++ord}_{name}.sql");
+                File.WriteAllText(filePath, scriptText);
+                var script = new Script();
+                script.FilePath = filePath;
 
-            Assert.That(script.GetSubsets(), Has.Member(testSubset));
-        }
+                Assert.That(script.Name, Is.EqualTo(name));
+            }
 
-        [Test]
-        public void Setting_Text_Updates_Warning()
-        {
-            var script = new Script();
+            [Test]
+            public void Setting_FilePath_Updates_Ordinal()
+            {
+                string scriptText = "This is a test file";
 
-            string warningMessage = "This is the message";
-            string text = $"{{{{Warning={warningMessage}}}}}";
+                var filePath = Path.Combine(_directory, $"_{++ord}_{name}.sql");
+                File.WriteAllText(filePath, scriptText);
+                var script = new Script();
+                script.FilePath = filePath;
 
-            script.Text = text;
+                Assert.That(script.Ordinal, Is.EqualTo(ord));
+            }
 
-            Assert.That(script.GetWarning(), Is.EqualTo(warningMessage));
-        }
+            [Test]
+            public void Ordinal_Cannot_Be_Set_If_Script_Backed_By_File()
+            {
+                string scriptText = "This is a test file";
 
-        [Test]
-        public void Setting_Text_Updates_Timeout()
-        {
-            var script = new Script();
+                var filePath = Path.Combine(_directory, $"_{++ord}_{name}.sql");
+                File.WriteAllText(filePath, scriptText);
+                var script = new Script();
+                script.FilePath = filePath;
 
-            int timeout = 23;
-            string text = $"{{{{Timeout={timeout}}}}}";
+                Assert.That(() => { script.Ordinal = 1; }, Throws.InvalidOperationException);
+            }
 
-            script.Text = text;
+            [Test]
+            public void Name_Cannot_Be_Set_If_Script_Backed_By_File()
+            {
+                string scriptText = "This is a test file";
 
-            Assert.That(script.GetTimeout(), Is.EqualTo(timeout));
-        }
+                var filePath = Path.Combine(_directory, $"_{++ord}_{name}.sql");
+                File.WriteAllText(filePath, scriptText);
+                var script = new Script();
+                script.FilePath = filePath;
 
-        [Test]
-        public void Setting_Text_Updates_Database()
-        {
-            var script = new Script();
-
-            string database = "TestDB";
-            string text = $"{{{{Database={database}}}}}";
-
-            script.Text = text;
-
-            Assert.That(script.GetDatabase(), Is.EqualTo(database));
-        }
-
-        [TestCase("VariableA")]
-        [TestCase("12345")]
-        [TestCase("Variable_123")]
-        [TestCase("?#$?")]
-        public void QueryStringReplaceTest(string variableName)
-        {
-            var filePath = Path.Combine(_directory, "_123_testFile.sql");
-
-            File.WriteAllText(filePath, $"Test variableA: <<{variableName}>>");
-
-            var script = new Script(filePath);
-
-            var query = script.GetVariableReplacedQuery(new Dictionary<string, string> { { variableName, "Test1" } });
-
-            Assert.That(query, Is.EqualTo("Test variableA: Test1"));
-        }
-
-        [TestCase("_123_TestCase.sql", 123)]
-        [TestCase("_456_.sql", 456)]
-        [TestCase("_0023123_TestCase.sql", 23123)]
-        [TestCase("_0_TestCase.sql", 0)]
-        [TestCase("_999999999999999_TestCase.sql", 999999999999999)]
-        public void TestOrdinalValues(string fileName, long ordinalValue)
-        {
-            var filePath = Path.Combine(_directory, fileName);
-
-            File.WriteAllText(filePath, "This is a test string");
-
-            var script = new Script(filePath);
-
-            Assert.That(script.Ordinal, Is.EqualTo(ordinalValue));
-        }
-
-        [TestCase("123_TestCase.sql")]
-        [TestCase("_456TestCase.sql")]
-        [TestCase("_0023123_TestCase.sqlbak")]
-        [TestCase("0TestCase.sql")]
-        [TestCase("_-12_TestCase.sql")]
-        public void TestCreateWithBadFileNames(string fileName)
-        {
-            var badFilePath = Path.Combine(_directory, fileName);
-
-            File.WriteAllText(badFilePath, "This is a test string");
-            Script script;
-            Assert.That(() => { script = new Script(badFilePath); }, Throws.ArgumentException);
+                Assert.That(() => { script.Name = "NewName"; }, Throws.InvalidOperationException);
+            }
         }
     }
 }
