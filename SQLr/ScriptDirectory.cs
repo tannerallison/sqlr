@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,38 +7,14 @@ namespace SQLr
 {
     public class ScriptDirectory
     {
-        #region Constants, Statics & Fields
-
-        private readonly string _directory;
-
-        private readonly List<Script> _directoryScripts;
-        private readonly FileSystemWatcher _watcher;
-
-        #endregion Constants, Statics & Fields
-
-        #region Constructors & Destructors
-
         public ScriptDirectory(string directory, bool includeSubDirectories)
         {
             _directory = directory;
             _directoryScripts = new List<Script>();
-            Variables = new HashSet<KeyValuePair<string, Script>>();
-            Subsets = new HashSet<KeyValuePair<string, Script>>();
 
             ScanDirectory(includeSubDirectories);
 
-            _watcher = new FileSystemWatcher(_directory)
-            {
-                EnableRaisingEvents = true,
-                Filter = "*.sql",
-                IncludeSubdirectories = includeSubDirectories,
-                NotifyFilter = NotifyFilters.Size | NotifyFilters.LastWrite | NotifyFilters.FileName
-            };
-
-            _watcher.Created += ScriptCreated;
-            _watcher.Changed += ScriptChanged;
-            _watcher.Renamed += ScriptRenamed;
-            _watcher.Deleted += ScriptDeleted;
+            _watcher = InitializeWatcher(includeSubDirectories);
         }
 
         ~ScriptDirectory()
@@ -48,22 +25,14 @@ namespace SQLr
             _watcher.Deleted -= ScriptDeleted;
         }
 
-        #endregion Constructors & Destructors
-
-        #region Properties
+        private readonly string _directory;
+        private readonly List<Script> _directoryScripts;
+        private readonly FileSystemWatcher _watcher;
 
         public List<Script> Scripts
         {
             get { return _directoryScripts.ToList(); }
         }
-
-        public HashSet<KeyValuePair<string, Script>> Subsets { get; }
-
-        public HashSet<KeyValuePair<string, Script>> Variables { get; }
-
-        #endregion Properties
-
-        #region Methods
 
         public void AddInstance(Dictionary<string, HashSet<Script>> collection, string key, Script value)
         {
@@ -73,28 +42,27 @@ namespace SQLr
             collection[key].Add(value);
         }
 
-        public void UpdateVarsAndSubsets(Script s)
-        {
-            //RemoveFromVarsAndSubs(s);
-            //foreach (var variable in s.Variables)
-            //{
-            //    Variables.Add(new KeyValuePair<string, Script>(variable, s));
-            //}
-            //foreach (var subset in s.Subsets)
-            //{
-            //    Subsets.Add(new KeyValuePair<string, Script>(subset, s));
-            //}
-        }
-
         private Script GetScript(string path)
         {
             return _directoryScripts.FirstOrDefault(v => v.FilePath == path);
         }
 
-        private void RemoveFromVarsAndSubs(Script s)
+        private FileSystemWatcher InitializeWatcher(bool includeSubDirectories)
         {
-            Variables.RemoveWhere(c => c.Value.Equals(s));
-            Subsets.RemoveWhere(c => c.Value.Equals(s));
+            var watcher = new FileSystemWatcher(_directory)
+            {
+                EnableRaisingEvents = true,
+                Filter = "*.sql",
+                IncludeSubdirectories = includeSubDirectories,
+                NotifyFilter = NotifyFilters.Size | NotifyFilters.LastWrite | NotifyFilters.FileName
+            };
+
+            watcher.Created += ScriptCreated;
+            watcher.Changed += ScriptChanged;
+            watcher.Renamed += ScriptRenamed;
+            watcher.Deleted += ScriptDeleted;
+
+            return watcher;
         }
 
         private void ScanDirectory(bool includeSubDirectories)
@@ -107,16 +75,46 @@ namespace SQLr
             foreach (var file in files)
             {
                 var script = new Script(file);
+
+                var existingScript = _directoryScripts.FirstOrDefault(v => v.Name == script.Name && v.Ordinal == script.Ordinal);
+
+                if (existingScript != null)
+                {
+                    var existingPath = Path.GetDirectoryName(existingScript.FilePath).Split('\\');
+                    var newPath = Path.GetDirectoryName(script.FilePath).Split('\\');
+
+                    if (newPath.Length < existingPath.Length)
+                    {
+                        _directoryScripts.Remove(existingScript);
+                        _directoryScripts.Add(script);
+                        continue;
+                    }
+                    else if (newPath.Length > existingPath.Length)
+                    {
+                        continue;
+                    }
+
+                    int i = 0;
+                    while (existingPath[i] == newPath[i])
+                        i++;
+
+                    if (newPath[i].CompareTo(existingPath[i]) < 0)
+                    {
+                        _directoryScripts.Remove(existingScript);
+                        _directoryScripts.Add(script);
+                        continue;
+                    }
+                    else continue;
+                }
+
                 _directoryScripts.Add(script);
-                UpdateVarsAndSubsets(script);
             }
         }
 
         private void ScriptChanged(object sender, FileSystemEventArgs e)
         {
-            //var script = GetScript(e.FullPath);
-            //script.RefreshMetadata();
-            //UpdateVarsAndSubsets(script);
+            var script = GetScript(e.FullPath);
+            script.RereadFile();
         }
 
         private void ScriptCreated(object sender, FileSystemEventArgs e)
@@ -124,9 +122,7 @@ namespace SQLr
             if (Constants.ScriptRegex.IsMatch(e.Name))
             {
                 var script = new Script(e.FullPath);
-
                 _directoryScripts.Add(script);
-                UpdateVarsAndSubsets(script);
             }
         }
 
@@ -137,7 +133,6 @@ namespace SQLr
             if (script != null)
             {
                 _directoryScripts.Remove(script);
-                RemoveFromVarsAndSubs(script);
             }
         }
 
@@ -149,13 +144,9 @@ namespace SQLr
                 return;
 
             _directoryScripts.Remove(script);
-            RemoveFromVarsAndSubs(script);
 
             var newScript = new Script(e.FullPath);
             _directoryScripts.Add(newScript);
-            UpdateVarsAndSubsets(script);
         }
-
-        #endregion Methods
     }
 }

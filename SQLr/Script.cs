@@ -15,14 +15,10 @@ namespace SQLr
 
         public Script(string scriptFilePath)
         {
-            //FilePath = scriptFilePath;
+            if (!Constants.ScriptRegex.IsMatch(scriptFilePath))
+                throw new ArgumentException("The file name given is not valid in the conversion application.");
 
-            //if (!Constants.ScriptRegex.IsMatch(scriptFilePath))
-            //    throw new ArgumentException("The file name given is not valid in the conversion application.");
-
-            //Name = Path.GetFileNameWithoutExtension(FilePath);
-
-            //RefreshMetadata();
+            FilePath = scriptFilePath;
         }
 
         #region Timeout
@@ -201,6 +197,11 @@ namespace SQLr
             return Equals(other.Name, Name);
         }
 
+        public void RereadFile()
+        {
+            Text = File.ReadAllText(_filePath);
+        }
+
         public override int GetHashCode()
         {
             return Name.GetHashCode();
@@ -221,7 +222,7 @@ namespace SQLr
             return query.ToString();
         }
 
-        public void RefreshMetadata()
+        private void RefreshMetadata()
         {
             Variables = LoadMultiTag(_text, @"<<(\w+?)>>").Distinct();
 
