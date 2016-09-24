@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SQLr.Tests
 {
@@ -150,6 +151,7 @@ namespace SQLr.Tests
         {
             var filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "A Test File 1");
+
             filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "A Test File 2");
 
@@ -158,6 +160,8 @@ namespace SQLr.Tests
             var newNumber = ++_testNumber;
             var newName = "newTestName";
             var newFileName = Path.Combine(_directory, $"_{newNumber}_{newName}.sql");
+
+            Thread.Sleep(25);
 
             File.Move(filePath, newFileName);
 

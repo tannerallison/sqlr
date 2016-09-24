@@ -9,16 +9,17 @@ namespace SQLr
 {
     public class Script
     {
-        public Script()
+        public Script(string scriptFilePath = null)
         {
-        }
+            _ordinal = long.MaxValue;
 
-        public Script(string scriptFilePath)
-        {
-            if (!Constants.ScriptRegex.IsMatch(scriptFilePath))
-                throw new ArgumentException("The file name given is not valid in the conversion application.");
+            if (!string.IsNullOrEmpty(scriptFilePath))
+            {
+                if (!Constants.ScriptRegex.IsMatch(scriptFilePath))
+                    throw new ArgumentException("The file name given is not valid in the conversion application.");
 
-            FilePath = scriptFilePath;
+                FilePath = scriptFilePath;
+            }
         }
 
         #region Timeout

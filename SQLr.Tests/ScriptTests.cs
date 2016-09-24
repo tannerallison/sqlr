@@ -7,6 +7,14 @@ namespace SQLr.Tests
     [TestFixture]
     public class ScriptTests
     {
+        [Test]
+        public void Ordinal_has_max_value_when_initialized()
+        {
+            var script = new Script();
+
+            Assert.That(script.Ordinal, Is.EqualTo(long.MaxValue));
+        }
+
         public class SettingTextUpdatesFields
         {
             private Script script;
