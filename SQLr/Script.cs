@@ -7,134 +7,254 @@ using System.Text.RegularExpressions;
 
 namespace SQLr
 {
-	public class Script
-	{
-		private string _database;
+    public class Script
+    {
+        public Script()
+        {
+        }
 
-		#region Constructors & Destructors
+        public Script(string scriptFilePath)
+        {
+            //FilePath = scriptFilePath;
 
-		public Script(string scriptFilePath)
-		{
-			FilePath = scriptFilePath;
+            //if (!Constants.ScriptRegex.IsMatch(scriptFilePath))
+            //    throw new ArgumentException("The file name given is not valid in the conversion application.");
 
-			if (!Constants.ScriptRegex.IsMatch(scriptFilePath))
-				throw new ArgumentException("The file name given is not valid in the conversion application.");
+            //Name = Path.GetFileNameWithoutExtension(FilePath);
 
-			Name = Path.GetFileNameWithoutExtension(FilePath);
+            //RefreshMetadata();
+        }
 
-			RefreshMetadata();
-		}
+        #region Timeout
 
-		#endregion
+        private string _timeout;
 
-		#region Properties
+        public int GetTimeout(Dictionary<string, string> variableMapping = null)
+        {
+            if (_timeout == null)
+                return 6000;
 
-		public string Database(Dictionary<string, string> variableReplacements) 
-		{
-			var dbVariable = _database.TrimStart('<').TrimEnd('>');
-			return variableReplacements.ContainsKey(dbVariable) ? variableReplacements[dbVariable] : _database;
-		}
+            string mappedTime = _timeout;
+            if (variableMapping != null)
+                mappedTime = variableMapping[_timeout.TrimStart('<').TrimEnd('>')] ?? _timeout;
 
-		public string FilePath { get; }
+            int time;
+            if (!int.TryParse(mappedTime, out time))
+                return 6000;
 
-		public string Name { get; }
+            return time;
+        }
 
-		public long Ordinal { get; private set; }
+        #endregion Timeout
 
-		public IEnumerable<string> Subsets { get; private set; }
+        #region Warning
 
-		public string Text { get; private set; }
+        private string _warning;
 
-		public int Timeout { get; private set; }
+        public string GetWarning(Dictionary<string, string> variableMapping = null)
+        {
+            if (_warning == null)
+                return null;
 
-		public IEnumerable<string> Variables { get; private set; }
+            if (variableMapping != null)
+                return variableMapping[_warning.TrimStart('<').TrimEnd('>')] ?? _warning;
 
-		public string WarningMessage { get; private set; }
+            return _warning;
+        }
 
-		#endregion
+        #endregion Warning
 
-		#region Methods
+        #region Variables
 
-		public override bool Equals(object obj)
-		{
-			if (obj.GetType() != typeof(Script)) return false;
-			var other = obj as Script;
-			if (ReferenceEquals(null, other)) return false;
-			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.Name, Name);
-		}
+        public IEnumerable<string> Variables { get; private set; }
 
-		public override int GetHashCode()
-		{
-			return Name.GetHashCode();
-		}
+        #endregion Variables
 
-		public string GetVariableReplacedQuery(Dictionary<string, string> variableReplacements)
-		{
-			var missing = Variables.Except(variableReplacements.Keys).ToList();
-			if (missing.Any())
-				throw new Exception($"Missing variables: {missing.Aggregate("", (c, n) => c + n + ", ").TrimEnd(' ', ',')}");
+        #region Subsets
 
-			var query = new StringBuilder(Text);
-			foreach (var pair in variableReplacements)
-			{
-				query.Replace("<<" + pair.Key + ">>", pair.Value);
-			}
+        private List<string> _subsets;
 
-			return query.ToString();
-		}
+        public IEnumerable<string> GetSubsets(Dictionary<string, string> variableMapping = null)
+        {
+            if (_subsets == null)
+                return new List<string>();
 
-		public void RefreshMetadata()
-		{
-			// Set the Script Text
-			Text = File.ReadAllText(FilePath);
+            if (variableMapping != null)
+                return _subsets.Select(s => variableMapping[s.TrimStart('<').TrimEnd('>')] ?? s);
 
-			// Set Ordinal
-			long ordinal;
-			if (long.TryParse(Constants.ScriptRegex.Match(FilePath).Groups[1].Value, out ordinal))
-				Ordinal = ordinal;
-			else
-				throw new Exception("The ordinal did not parse correctly");
+            return _subsets;
+        }
 
-			// Identify Variables
-			Variables = LoadMultiTag(Text, "<<(\\w+?)>>").Distinct();
+        #endregion Subsets
 
-			// Identify Subsets
-			Subsets = LoadMultiTag(Text, "\\{\\{subset=(\\w+?)}}");
+        #region Database
 
-			// Identify a Timeout
-			int timeoutVal;
-			Timeout = int.TryParse(LoadTag(Text, "\\{\\{Timeout=(\\d+?)}}"), out timeoutVal)
-				? timeoutVal
-				: 6000;
+        private string _database;
 
-			// Identify a Warning Message
-			WarningMessage = LoadTag(Text, "\\{\\{Warn=(.+?)}}");
-		}
+        public string GetDatabase(Dictionary<string, string> variableMapping = null)
+        {
+            if (_database == null)
+                return null;
 
-		private static IEnumerable<string> LoadMultiTag(string text, string regex, int grouping = 1)
-		{
-			var re = new Regex(regex, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (variableMapping != null)
+                return variableMapping[_database.TrimStart('<').TrimEnd('>')] ?? _database;
 
-			var matchCollection = re.Matches(text);
+            return _database;
+        }
 
-			return (from Match match in matchCollection select match.Groups[grouping].Value).Distinct();
-		}
+        #endregion Database
 
-		private string LoadTag(string text, string regex)
-		{
-			var re = new Regex(regex, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        #region FilePath
 
-			var matchCollection = re.Matches(text);
+        private string _filePath;
 
-			if (matchCollection.Count == 0)
-				return null;
+        public string FilePath
+        {
+            get
+            {
+                return _filePath;
+            }
 
-			var tag = (from Match match in matchCollection select match.Groups[1].Value).FirstOrDefault();
+            set
+            {
+                _filePath = value;
 
-			return tag?.Replace("--", "");
-		}
-		
-		#endregion
-	}
+                if (!File.Exists(_filePath))
+                    throw new FileNotFoundException("Could not find the expected file", _filePath);
+
+                var match = Constants.ScriptRegex.Match(_filePath);
+
+                // Set Name
+                _name = match.Groups[2].Value;
+
+                // Set Ordinal
+                long ordinal;
+                if (long.TryParse(match.Groups[1].Value, out ordinal))
+                    _ordinal = ordinal;
+                else
+                    throw new Exception("The ordinal did not parse correctly");
+
+                Text = File.ReadAllText(_filePath);
+            }
+        }
+
+        #endregion FilePath
+
+        #region Name
+
+        private string _name;
+
+        public string Name
+        {
+            get { return _name; }
+            set
+            {
+                if (_filePath != null)
+                    throw new InvalidOperationException($"Cannot set the name on a file-backed Script object. The script is backed by the file ({_filePath})");
+
+                _name = value;
+            }
+        }
+
+        #endregion Name
+
+        #region Ordinal
+
+        private long _ordinal;
+
+        public long Ordinal
+        {
+            get { return _ordinal; }
+            set
+            {
+                if (_filePath != null)
+                    throw new InvalidOperationException($"Cannot set the ordinal on a file-backed Script object. The script is backed by the file ({_filePath})");
+
+                _ordinal = value;
+            }
+        }
+
+        #endregion Ordinal
+
+        #region Text
+
+        private string _text;
+
+        public string Text
+        {
+            get { return _text; }
+            set
+            {
+                _text = value;
+                RefreshMetadata();
+            }
+        }
+
+        #endregion Text
+
+        public override bool Equals(object obj)
+        {
+            if (obj.GetType() != typeof(Script)) return false;
+            var other = obj as Script;
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(other.Name, Name);
+        }
+
+        public override int GetHashCode()
+        {
+            return Name.GetHashCode();
+        }
+
+        public string GetVariableReplacedQuery(Dictionary<string, string> variableReplacements)
+        {
+            var missing = Variables.Except(variableReplacements.Keys).ToList();
+            if (missing.Any())
+                throw new Exception($"Missing variables: {missing.Aggregate("", (c, n) => c + n + ", ").TrimEnd(' ', ',')}");
+
+            var query = new StringBuilder(Text);
+            foreach (var pair in variableReplacements)
+            {
+                query.Replace("<<" + pair.Key + ">>", pair.Value);
+            }
+
+            return query.ToString();
+        }
+
+        public void RefreshMetadata()
+        {
+            Variables = LoadMultiTag(_text, @"<<(\w+?)>>").Distinct();
+
+            _subsets = LoadMultiTag(_text, @"{{Subset=(\w+?)}}").ToList();
+
+            _timeout = LoadTag(_text, @"{{Timeout=(\d+?)}}") ?? "6000";
+
+            _warning = LoadTag(_text, @"{{Warning=(.+?)}}");
+
+            _database = LoadTag(_text, @"{{Database=(.+?)}}");
+        }
+
+        private static IEnumerable<string> LoadMultiTag(string text, string regex, int grouping = 1)
+        {
+            var re = new Regex(regex, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            var matchCollection = re.Matches(text);
+
+            return (from Match match in matchCollection select match.Groups[grouping].Value).Distinct();
+        }
+
+        private string LoadTag(string text, string regex)
+        {
+            var re = new Regex(regex, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            var matchCollection = re.Matches(text);
+
+            if (matchCollection.Count == 0)
+                return null;
+
+            var tag = (from Match match in matchCollection select match.Groups[1].Value).FirstOrDefault();
+
+            return tag?.Replace("--", "");
+        }
+    }
 }

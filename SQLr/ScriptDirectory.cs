@@ -4,158 +4,158 @@ using System.Linq;
 
 namespace SQLr
 {
-	public class ScriptDirectory
-	{
-		#region  Constants, Statics & Fields
+    public class ScriptDirectory
+    {
+        #region Constants, Statics & Fields
 
-		private readonly string _directory;
+        private readonly string _directory;
 
-		private readonly List<Script> _directoryScripts;
-		private readonly FileSystemWatcher _watcher;
+        private readonly List<Script> _directoryScripts;
+        private readonly FileSystemWatcher _watcher;
 
-		#endregion
+        #endregion Constants, Statics & Fields
 
-		#region Constructors & Destructors
+        #region Constructors & Destructors
 
-		public ScriptDirectory(string directory, bool includeSubDirectories)
-		{
-			_directory = directory;
-			_directoryScripts = new List<Script>();
-			Variables = new HashSet<KeyValuePair<string, Script>>();
-			Subsets = new HashSet<KeyValuePair<string, Script>>();
+        public ScriptDirectory(string directory, bool includeSubDirectories)
+        {
+            _directory = directory;
+            _directoryScripts = new List<Script>();
+            Variables = new HashSet<KeyValuePair<string, Script>>();
+            Subsets = new HashSet<KeyValuePair<string, Script>>();
 
-			ScanDirectory(includeSubDirectories);
+            ScanDirectory(includeSubDirectories);
 
-			_watcher = new FileSystemWatcher(_directory)
-			{
-				EnableRaisingEvents = true,
-				Filter = "*.sql",
-				IncludeSubdirectories = includeSubDirectories,
-				NotifyFilter = NotifyFilters.Size | NotifyFilters.LastWrite | NotifyFilters.FileName
-			};
+            _watcher = new FileSystemWatcher(_directory)
+            {
+                EnableRaisingEvents = true,
+                Filter = "*.sql",
+                IncludeSubdirectories = includeSubDirectories,
+                NotifyFilter = NotifyFilters.Size | NotifyFilters.LastWrite | NotifyFilters.FileName
+            };
 
-			_watcher.Created += ScriptCreated;
-			_watcher.Changed += ScriptChanged;
-			_watcher.Renamed += ScriptRenamed;
-			_watcher.Deleted += ScriptDeleted;
-		}
+            _watcher.Created += ScriptCreated;
+            _watcher.Changed += ScriptChanged;
+            _watcher.Renamed += ScriptRenamed;
+            _watcher.Deleted += ScriptDeleted;
+        }
 
-		~ScriptDirectory()
-		{
-			_watcher.Created -= ScriptCreated;
-			_watcher.Changed -= ScriptChanged;
-			_watcher.Renamed -= ScriptRenamed;
-			_watcher.Deleted -= ScriptDeleted;
-		}
+        ~ScriptDirectory()
+        {
+            _watcher.Created -= ScriptCreated;
+            _watcher.Changed -= ScriptChanged;
+            _watcher.Renamed -= ScriptRenamed;
+            _watcher.Deleted -= ScriptDeleted;
+        }
 
-		#endregion
+        #endregion Constructors & Destructors
 
-		#region Properties
+        #region Properties
 
-		public List<Script> Scripts
-		{
-			get { return _directoryScripts.ToList(); }
-		}
+        public List<Script> Scripts
+        {
+            get { return _directoryScripts.ToList(); }
+        }
 
-		public HashSet<KeyValuePair<string, Script>> Subsets { get; }
+        public HashSet<KeyValuePair<string, Script>> Subsets { get; }
 
-		public HashSet<KeyValuePair<string, Script>> Variables { get; }
+        public HashSet<KeyValuePair<string, Script>> Variables { get; }
 
-		#endregion
+        #endregion Properties
 
-		#region Methods
+        #region Methods
 
-		public void AddInstance(Dictionary<string, HashSet<Script>> collection, string key, Script value)
-		{
-			if (!collection.ContainsKey(key))
-				collection[key] = new HashSet<Script>();
+        public void AddInstance(Dictionary<string, HashSet<Script>> collection, string key, Script value)
+        {
+            if (!collection.ContainsKey(key))
+                collection[key] = new HashSet<Script>();
 
-			collection[key].Add(value);
-		}
+            collection[key].Add(value);
+        }
 
-		public void UpdateVarsAndSubsets(Script s)
-		{
-			RemoveFromVarsAndSubs(s);
-			foreach (var variable in s.Variables)
-			{
-				Variables.Add(new KeyValuePair<string, Script>(variable, s));
-			}
-			foreach (var subset in s.Subsets)
-			{
-				Subsets.Add(new KeyValuePair<string, Script>(subset, s));
-			}
-		}
+        public void UpdateVarsAndSubsets(Script s)
+        {
+            //RemoveFromVarsAndSubs(s);
+            //foreach (var variable in s.Variables)
+            //{
+            //    Variables.Add(new KeyValuePair<string, Script>(variable, s));
+            //}
+            //foreach (var subset in s.Subsets)
+            //{
+            //    Subsets.Add(new KeyValuePair<string, Script>(subset, s));
+            //}
+        }
 
-		private Script GetScript(string path)
-		{
-			return _directoryScripts.FirstOrDefault(v => v.FilePath == path);
-		}
+        private Script GetScript(string path)
+        {
+            return _directoryScripts.FirstOrDefault(v => v.FilePath == path);
+        }
 
-		private void RemoveFromVarsAndSubs(Script s)
-		{
-			Variables.RemoveWhere(c => c.Value.Equals(s));
-			Subsets.RemoveWhere(c => c.Value.Equals(s));
-		}
+        private void RemoveFromVarsAndSubs(Script s)
+        {
+            Variables.RemoveWhere(c => c.Value.Equals(s));
+            Subsets.RemoveWhere(c => c.Value.Equals(s));
+        }
 
-		private void ScanDirectory(bool includeSubDirectories)
-		{
-			var files =
-				Directory.GetFiles(_directory, "*.sql",
-					includeSubDirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
-					.Where(v => Constants.ScriptRegex.Match(v.Substring(v.LastIndexOf('\\') + 1)).Success);
+        private void ScanDirectory(bool includeSubDirectories)
+        {
+            var files =
+                Directory.GetFiles(_directory, "*.sql",
+                    includeSubDirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
+                    .Where(v => Constants.ScriptRegex.Match(v.Substring(v.LastIndexOf('\\') + 1)).Success);
 
-			foreach (var file in files)
-			{
-				var script = new Script(file);
-				_directoryScripts.Add(script);
-				UpdateVarsAndSubsets(script);
-			}
-		}
+            foreach (var file in files)
+            {
+                var script = new Script(file);
+                _directoryScripts.Add(script);
+                UpdateVarsAndSubsets(script);
+            }
+        }
 
-		private void ScriptChanged(object sender, FileSystemEventArgs e)
-		{
-			var script = GetScript(e.FullPath);
-			script.RefreshMetadata();
-			UpdateVarsAndSubsets(script);
-		}
+        private void ScriptChanged(object sender, FileSystemEventArgs e)
+        {
+            //var script = GetScript(e.FullPath);
+            //script.RefreshMetadata();
+            //UpdateVarsAndSubsets(script);
+        }
 
-		private void ScriptCreated(object sender, FileSystemEventArgs e)
-		{
-			if (Constants.ScriptRegex.IsMatch(e.Name))
-			{
-				var script = new Script(e.FullPath);
+        private void ScriptCreated(object sender, FileSystemEventArgs e)
+        {
+            if (Constants.ScriptRegex.IsMatch(e.Name))
+            {
+                var script = new Script(e.FullPath);
 
-				_directoryScripts.Add(script);
-				UpdateVarsAndSubsets(script);
-			}
-		}
+                _directoryScripts.Add(script);
+                UpdateVarsAndSubsets(script);
+            }
+        }
 
-		private void ScriptDeleted(object sender, FileSystemEventArgs e)
-		{
-			var script = GetScript(e.FullPath);
+        private void ScriptDeleted(object sender, FileSystemEventArgs e)
+        {
+            var script = GetScript(e.FullPath);
 
-			if (script != null)
-			{
-				_directoryScripts.Remove(script);
-				RemoveFromVarsAndSubs(script);
-			}
-		}
+            if (script != null)
+            {
+                _directoryScripts.Remove(script);
+                RemoveFromVarsAndSubs(script);
+            }
+        }
 
-		private void ScriptRenamed(object sender, RenamedEventArgs e)
-		{
-			var script = GetScript(e.OldFullPath);
+        private void ScriptRenamed(object sender, RenamedEventArgs e)
+        {
+            var script = GetScript(e.OldFullPath);
 
-			if (script == null)
-				return;
+            if (script == null)
+                return;
 
-			_directoryScripts.Remove(script);
-			RemoveFromVarsAndSubs(script);
+            _directoryScripts.Remove(script);
+            RemoveFromVarsAndSubs(script);
 
-			var newScript = new Script(e.FullPath);
-			_directoryScripts.Add(newScript);
-			UpdateVarsAndSubsets(script);
-		}
+            var newScript = new Script(e.FullPath);
+            _directoryScripts.Add(newScript);
+            UpdateVarsAndSubsets(script);
+        }
 
-		#endregion
-	}
+        #endregion Methods
+    }
 }
