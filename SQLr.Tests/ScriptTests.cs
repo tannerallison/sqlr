@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using SQLr;
 using System.Collections.Generic;
 using System.IO;
 
@@ -101,7 +102,7 @@ namespace SQLr.Tests
                 var script = new Script();
                 script.FilePath = filePath;
 
-                Assert.That(script.Text, Is.EqualTo(scriptText));
+                Assert.That(script.GetText(), Is.EqualTo(scriptText));
             }
 
             [Test]
@@ -155,6 +156,126 @@ namespace SQLr.Tests
 
                 Assert.That(() => { script.Name = "NewName"; }, Throws.InvalidOperationException);
             }
+        }
+
+        [Test]
+        public void Get_Text_Returns_Null_When_First_Initialized()
+        {
+            var script = new Script();
+
+            Assert.That(script.GetText(), Is.Null);
+        }
+
+        [Test]
+        public void Get_Text_Returns_Mapped_Value_When_Passed_Mapping()
+        {
+            var script = new Script();
+            script.Text = @"This text has a <<Variable>>";
+
+            var expectedMessage = "Pass";
+            var varMap = new Dictionary<string, string>() { { "Variable", expectedMessage } };
+
+            Assert.That(script.GetText(varMap), Is.EqualTo("This text has a Pass"));
+        }
+
+        [Test]
+        public void Get_Text_Throws_Error_If_A_Variable_Is_Missing()
+        {
+            var script = new Script();
+            script.Text = @"This text has a <<Variable>> and also a <<MissingVariable>>";
+
+            var varMap = new Dictionary<string, string>() { { "Variable", "var" } };
+
+            Assert.That(() => { script.GetText(varMap); }, Throws.ArgumentException);
+        }
+
+        [Test]
+        public void Get_Subsets_Returns_Null_When_First_Initialized()
+        {
+            var script = new Script();
+
+            Assert.That(script.GetSubsets(), Is.Not.Null.And.Empty);
+        }
+
+        [Test]
+        public void Get_Subsets_Returns_Mapped_Value_When_Passed_Mapping()
+        {
+            var script = new Script();
+            script.Text = @"{{Subset=<<SubsetVariable>>}}";
+
+            var expectedMessage = "SpecialSubset";
+            var varMap = new Dictionary<string, string>() { { "SubsetVariable", expectedMessage } };
+
+            Assert.That(script.GetSubsets(varMap), Has.Member(expectedMessage));
+        }
+
+        [Test]
+        public void Get_Warning_Returns_Null_When_First_Initialized()
+        {
+            var script = new Script();
+
+            Assert.That(script.GetWarning(), Is.Null);
+        }
+
+        [Test]
+        public void Get_Warning_Returns_Mapped_Value_When_Passed_Mapping()
+        {
+            var script = new Script();
+            script.Text = @"{{Warning=<<WarnVariable>>}}";
+
+            var expectedMessage = "This is a warning";
+            var varMap = new Dictionary<string, string>() { { "WarnVariable", expectedMessage } };
+
+            Assert.That(script.GetWarning(varMap), Is.EqualTo(expectedMessage));
+        }
+
+        [Test]
+        public void Get_Database_Returns_Null_When_First_Initialized()
+        {
+            var script = new Script();
+
+            Assert.That(script.GetDatabase(), Is.Null);
+        }
+
+        [Test]
+        public void Get_Database_Returns_Mapped_Value_When_Passed_Mapping()
+        {
+            var script = new Script();
+            script.Text = @"{{Database=<<DatabaseVariable>>}}";
+
+            var expectedMessage = "NewDatabase";
+            var varMap = new Dictionary<string, string>() { { "DatabaseVariable", expectedMessage } };
+
+            Assert.That(script.GetDatabase(varMap), Is.EqualTo(expectedMessage));
+        }
+
+        [Test]
+        public void Get_Timeout_Returns_6000_When_First_Initialized()
+        {
+            var script = new Script();
+
+            Assert.That(script.GetTimeout(), Is.EqualTo(6000));
+        }
+
+        [Test]
+        public void Get_Timeout_Returns_Mapped_Value_When_Passed_Mapping()
+        {
+            var script = new Script();
+            script.Text = @"{{Timeout=<<TimeoutVariable>>}}";
+
+            var expectedMessage = "12345";
+            var varMap = new Dictionary<string, string>() { { "TimeoutVariable", expectedMessage } };
+
+            Assert.That(script.GetTimeout(varMap).ToString(), Is.EqualTo(expectedMessage));
+        }
+
+        [Test]
+        public void Get_Timeout_Returns_6000_When_Timeout_Value_Is_Invalid()
+        {
+            var script = new Script();
+            script.Text = @"{{Timeout=Invalid23}}";
+
+            Assert.That(script.GetTimeout(), Is.EqualTo(6000));
         }
     }
 }

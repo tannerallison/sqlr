@@ -25,11 +25,11 @@ namespace SQLr
                 {
                     foreach (var s in _scriptDirectories[i].Scripts)
                     {
-                        if (!scripts.Add(s))
-                        {
-                            scripts.Remove(s);
-                            scripts.Add(s);
-                        }
+                        if (scripts.Add(s))
+                            continue;
+
+                        scripts.Remove(s);
+                        scripts.Add(s);
                     }
                 }
             }

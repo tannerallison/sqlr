@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace SQLr
 {
+    [System.Runtime.InteropServices.Guid("86243A08-834F-42EC-AA4F-97D50FBC3957")]
     public class Script
     {
         public Script(string scriptFilePath = null)
@@ -22,89 +23,20 @@ namespace SQLr
             }
         }
 
-        #region Timeout
-
+        private string _database;
+        private string _filePath;
+        private string _name;
+        private long _ordinal;
+        private List<string> _subsets;
+        private string _text;
         private string _timeout;
-
-        public int GetTimeout(Dictionary<string, string> variableMapping = null)
-        {
-            if (_timeout == null)
-                return 6000;
-
-            string mappedTime = _timeout;
-            if (variableMapping != null)
-                mappedTime = variableMapping[_timeout.TrimStart('<').TrimEnd('>')] ?? _timeout;
-
-            int time;
-            if (!int.TryParse(mappedTime, out time))
-                return 6000;
-
-            return time;
-        }
-
-        #endregion Timeout
-
-        #region Warning
-
         private string _warning;
 
-        public string GetWarning(Dictionary<string, string> variableMapping = null)
-        {
-            if (_warning == null)
-                return null;
-
-            if (variableMapping != null)
-                return variableMapping[_warning.TrimStart('<').TrimEnd('>')] ?? _warning;
-
-            return _warning;
-        }
-
-        #endregion Warning
-
-        #region Variables
-
-        public IEnumerable<string> Variables { get; private set; }
-
-        #endregion Variables
-
-        #region Subsets
-
-        private List<string> _subsets;
-
-        public IEnumerable<string> GetSubsets(Dictionary<string, string> variableMapping = null)
-        {
-            if (_subsets == null)
-                return new List<string>();
-
-            if (variableMapping != null)
-                return _subsets.Select(s => variableMapping[s.TrimStart('<').TrimEnd('>')] ?? s);
-
-            return _subsets;
-        }
-
-        #endregion Subsets
-
-        #region Database
-
-        private string _database;
-
-        public string GetDatabase(Dictionary<string, string> variableMapping = null)
-        {
-            if (_database == null)
-                return null;
-
-            if (variableMapping != null)
-                return variableMapping[_database.TrimStart('<').TrimEnd('>')] ?? _database;
-
-            return _database;
-        }
-
-        #endregion Database
-
-        #region FilePath
-
-        private string _filePath;
-
+        /// <summary>
+        /// When the FilePath is set the Name and Ordinal fields are set from the path and the text
+        /// of the file is automatically written into Text which automatically refreshes all the
+        /// other fields as well
+        /// </summary>
         public string FilePath
         {
             get
@@ -135,12 +67,6 @@ namespace SQLr
             }
         }
 
-        #endregion FilePath
-
-        #region Name
-
-        private string _name;
-
         public string Name
         {
             get { return _name; }
@@ -152,12 +78,6 @@ namespace SQLr
                 _name = value;
             }
         }
-
-        #endregion Name
-
-        #region Ordinal
-
-        private long _ordinal;
 
         public long Ordinal
         {
@@ -171,15 +91,12 @@ namespace SQLr
             }
         }
 
-        #endregion Ordinal
-
-        #region Text
-
-        private string _text;
-
+        /// <summary>
+        /// When the Text field is set, the Variables, Subsets, Database, Timeout, and Warning fields
+        /// are automatically refreshed
+        /// </summary>
         public string Text
         {
-            get { return _text; }
             set
             {
                 _text = value;
@@ -187,15 +104,82 @@ namespace SQLr
             }
         }
 
-        #endregion Text
+        public IEnumerable<string> Variables { get; private set; }
 
-        public override bool Equals(object obj)
+        public string GetDatabase(Dictionary<string, string> variableMapping = null)
         {
-            if (obj.GetType() != typeof(Script)) return false;
-            var other = obj as Script;
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Equals(other.Name, Name);
+            if (_database == null)
+                return null;
+
+            if (variableMapping != null)
+                return variableMapping[_database.TrimStart('<').TrimEnd('>')] ?? _database;
+
+            return _database;
+        }
+
+        public IEnumerable<string> GetSubsets(Dictionary<string, string> variableMapping = null)
+        {
+            if (_subsets == null)
+                return new List<string>();
+
+            if (variableMapping != null)
+                return _subsets.Select(s => variableMapping[s.TrimStart('<').TrimEnd('>')] ?? s);
+
+            return _subsets;
+        }
+
+        /// <summary>
+        /// Returns the text of the script. If a variable mapping is passed in, any variables in the
+        /// text will be replaced by their mapped value
+        /// </summary>
+        /// <param name="variableMapping"></param>
+        /// <returns></returns>
+        public string GetText(Dictionary<string, string> variableMapping = null)
+        {
+            if (_text == null)
+                return null;
+
+            StringBuilder returnText = new StringBuilder(_text);
+            if (variableMapping != null)
+            {
+                var missing = Variables.Except(variableMapping.Keys).ToList();
+                if (missing.Any())
+                    throw new ArgumentException($"Missing variables: {missing.Aggregate("", (c, n) => c + n + ", ").TrimEnd(' ', ',')}");
+
+                foreach (var v in variableMapping)
+                {
+                    returnText.Replace($"<<{v.Key}>>", v.Value);
+                }
+            }
+
+            return returnText.ToString();
+        }
+
+        public int GetTimeout(Dictionary<string, string> variableMapping = null)
+        {
+            if (_timeout == null)
+                return 6000;
+
+            string mappedTime = _timeout;
+            if (variableMapping != null)
+                mappedTime = variableMapping[_timeout.TrimStart('<').TrimEnd('>')] ?? _timeout;
+
+            int time;
+            if (!int.TryParse(mappedTime, out time))
+                return 6000;
+
+            return time;
+        }
+
+        public string GetWarning(Dictionary<string, string> variableMapping = null)
+        {
+            if (_warning == null)
+                return null;
+
+            if (variableMapping != null)
+                return variableMapping[_warning.TrimStart('<').TrimEnd('>')] ?? _warning;
+
+            return _warning;
         }
 
         public void RereadFile()
@@ -203,60 +187,17 @@ namespace SQLr
             Text = File.ReadAllText(_filePath);
         }
 
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode();
-        }
-
-        public string GetVariableReplacedQuery(Dictionary<string, string> variableReplacements)
-        {
-            var missing = Variables.Except(variableReplacements.Keys).ToList();
-            if (missing.Any())
-                throw new Exception($"Missing variables: {missing.Aggregate("", (c, n) => c + n + ", ").TrimEnd(' ', ',')}");
-
-            var query = new StringBuilder(Text);
-            foreach (var pair in variableReplacements)
-            {
-                query.Replace("<<" + pair.Key + ">>", pair.Value);
-            }
-
-            return query.ToString();
-        }
-
         private void RefreshMetadata()
         {
-            Variables = LoadMultiTag(_text, @"<<(\w+?)>>").Distinct();
+            Variables = ScriptUtility.LoadMultiTag(_text, @"<<(\w+?)>>").Distinct();
 
-            _subsets = LoadMultiTag(_text, @"{{Subset=(\w+?)}}").ToList();
+            _subsets = ScriptUtility.LoadMultiTag(_text, @"{{Subset=([\w<>]+?)}}").ToList();
 
-            _timeout = LoadTag(_text, @"{{Timeout=(\d+?)}}") ?? "6000";
+            _timeout = ScriptUtility.LoadTag(_text, @"{{Timeout=([\w<>]+?)}}") ?? "6000";
 
-            _warning = LoadTag(_text, @"{{Warning=(.+?)}}");
+            _warning = ScriptUtility.LoadTag(_text, @"{{Warning=(.+?)}}");
 
-            _database = LoadTag(_text, @"{{Database=(.+?)}}");
-        }
-
-        private static IEnumerable<string> LoadMultiTag(string text, string regex, int grouping = 1)
-        {
-            var re = new Regex(regex, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-            var matchCollection = re.Matches(text);
-
-            return (from Match match in matchCollection select match.Groups[grouping].Value).Distinct();
-        }
-
-        private string LoadTag(string text, string regex)
-        {
-            var re = new Regex(regex, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-            var matchCollection = re.Matches(text);
-
-            if (matchCollection.Count == 0)
-                return null;
-
-            var tag = (from Match match in matchCollection select match.Groups[1].Value).FirstOrDefault();
-
-            return tag?.Replace("--", "");
+            _database = ScriptUtility.LoadTag(_text, @"{{Database=(.+?)}}");
         }
     }
 }
