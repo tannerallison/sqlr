@@ -114,6 +114,9 @@ namespace SQLr.Tests
             var scriptDirectory = new ScriptDirectory(_directory, true);
 
             Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(2), "Only two files should be included since they have the same name");
+
+            Directory.Delete(subDirectoryA, true);
+            Directory.Delete(subDirectoryB, true);
         }
 
         [OneTimeSetUp]

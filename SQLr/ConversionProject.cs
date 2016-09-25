@@ -1,32 +1,53 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace SQLr
 {
     public class ConversionProject
     {
-        /// <summary>
-        /// Scripts within the last directory take precedence over scripts in the first directory
-        /// </summary>
-        private List<ScriptDirectory> ScriptDirectories { get; }
-
-        public Dictionary<string, string> VariableValues { get; }
-
-        private List<Script> GetScripts()
+        public ConversionProject()
         {
-            var directories = ScriptDirectories.ToList();
-            directories.Reverse();
+            _scriptDirectories = new List<ScriptDirectory>();
+        }
 
-            HashSet<Script> scripts = new HashSet<Script>();
-            foreach (ScriptDirectory directory in directories)
+        private List<ScriptDirectory> _scriptDirectories;
+
+        public List<ScriptDirectory> ScriptDirectories { get { return _scriptDirectories; } }
+
+        private HashSet<Script> scripts = new HashSet<Script>(new ScriptComparer());
+
+        public List<Script> GetScripts()
+        {
+            if (scripts == null || scripts.Count == 0 || _scriptDirectories.Any(v => v.IsDirty))
             {
-                foreach (Script script in directory.Scripts)
+                for (int i = _scriptDirectories.Count - 1; i >= 0; i--)
                 {
-                    scripts.Add(script);
+                    foreach (var s in _scriptDirectories[i].Scripts)
+                    {
+                        if (!scripts.Add(s))
+                        {
+                            scripts.Remove(s);
+                            scripts.Add(s);
+                        }
+                    }
                 }
             }
 
-            return scripts.OrderBy(b => b.Ordinal).ToList();
+            return scripts.OrderBy(v => v.Ordinal).ToList();
+        }
+
+        public class ScriptComparer : IEqualityComparer<Script>
+        {
+            public bool Equals(Script one, Script two)
+            {
+                return one.Ordinal == two.Ordinal && one.Name == two.Name;
+            }
+
+            public int GetHashCode(Script item)
+            {
+                return (item.Name + item.Ordinal.ToString()).GetHashCode();
+            }
         }
     }
 }

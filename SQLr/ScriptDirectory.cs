@@ -31,8 +31,14 @@ namespace SQLr
 
         public List<Script> Scripts
         {
-            get { return _directoryScripts.ToList(); }
+            get
+            {
+                IsDirty = false;
+                return _directoryScripts.ToList();
+            }
         }
+
+        public bool IsDirty { get; internal set; }
 
         public void AddInstance(Dictionary<string, HashSet<Script>> collection, string key, Script value)
         {
@@ -115,6 +121,7 @@ namespace SQLr
         {
             var script = GetScript(e.FullPath);
             script.RereadFile();
+            IsDirty = true;
         }
 
         private void ScriptCreated(object sender, FileSystemEventArgs e)
@@ -123,6 +130,7 @@ namespace SQLr
             {
                 var script = new Script(e.FullPath);
                 _directoryScripts.Add(script);
+                IsDirty = true;
             }
         }
 
@@ -133,6 +141,7 @@ namespace SQLr
             if (script != null)
             {
                 _directoryScripts.Remove(script);
+                IsDirty = true;
             }
         }
 
@@ -147,6 +156,7 @@ namespace SQLr
 
             var newScript = new Script(e.FullPath);
             _directoryScripts.Add(newScript);
+            IsDirty = true;
         }
     }
 }
