@@ -1,18 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-
+﻿// --------------------------------------------------------------------------------------------------------------------
+// SQLr - SQLr - Script.cs
+// <Author></Author>
+// <CreatedDate>2016-09-23</CreatedDate>
+// <LastEditDate>2016-09-27</LastEditDate>
+// <summary>
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 namespace SQLr
 {
-    [System.Runtime.InteropServices.Guid("86243A08-834F-42EC-AA4F-97D50FBC3957")]
+    #region using
+
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Text;
+
+    #endregion
+
     public class Script
     {
+        private string database;
+        private string filePath;
+        private string name;
+        private long ordinal;
+        private List<string> subsets;
+        private string text;
+        private string timeout;
+        private string warning;
+
         public Script(string scriptFilePath = null)
         {
-            _ordinal = long.MaxValue;
+            ordinal = long.MaxValue;
 
             if (!string.IsNullOrEmpty(scriptFilePath))
             {
@@ -23,146 +42,164 @@ namespace SQLr
             }
         }
 
-        private string _database;
-        private string _filePath;
-        private string _name;
-        private long _ordinal;
-        private List<string> _subsets;
-        private string _text;
-        private string _timeout;
-        private string _warning;
-
         /// <summary>
-        /// When the FilePath is set the Name and Ordinal fields are set from the path and the text
-        /// of the file is automatically written into Text which automatically refreshes all the
-        /// other fields as well
+        ///     Gets or sets the FilePath of the script. When the FilePath is set the Name and Ordinal
+        ///     fields are set from the path and the text of the file is automatically written into Text
+        ///     which automatically refreshes all the other fields as well
         /// </summary>
         public string FilePath
         {
-            get
-            {
-                return _filePath;
-            }
-
+            get { return filePath; }
             set
             {
-                _filePath = value;
+                filePath = value;
 
-                if (!File.Exists(_filePath))
-                    throw new FileNotFoundException("Could not find the expected file", _filePath);
+                if (!File.Exists(filePath))
+                    throw new FileNotFoundException("Could not find the expected file", filePath);
 
-                var match = Constants.ScriptRegex.Match(_filePath);
+                var match = Constants.ScriptRegex.Match(filePath);
 
                 // Set Name
-                _name = match.Groups[2].Value;
+                name = match.Groups[2].Value;
 
                 // Set Ordinal
-                long ordinal;
-                if (long.TryParse(match.Groups[1].Value, out ordinal))
-                    _ordinal = ordinal;
+                long tempOrd;
+                if (long.TryParse(match.Groups[1].Value, out tempOrd))
+                    ordinal = tempOrd;
                 else
                     throw new Exception("The ordinal did not parse correctly");
 
-                Text = File.ReadAllText(_filePath);
-            }
-        }
-
-        public string Name
-        {
-            get { return _name; }
-            set
-            {
-                if (_filePath != null)
-                    throw new InvalidOperationException($"Cannot set the name on a file-backed Script object. The script is backed by the file ({_filePath})");
-
-                _name = value;
-            }
-        }
-
-        public long Ordinal
-        {
-            get { return _ordinal; }
-            set
-            {
-                if (_filePath != null)
-                    throw new InvalidOperationException($"Cannot set the ordinal on a file-backed Script object. The script is backed by the file ({_filePath})");
-
-                _ordinal = value;
+                Text = File.ReadAllText(filePath);
             }
         }
 
         /// <summary>
-        /// When the Text field is set, the Variables, Subsets, Database, Timeout, and Warning fields
-        /// are automatically refreshed
+        ///     Gets or sets the name of the script.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">
+        ///     If an attempt is made to set the name when the name is pulled from the FilePath.
+        /// </exception>
+        public string Name
+        {
+            get { return name; }
+            set
+            {
+                if (filePath != null)
+                {
+                    throw new InvalidOperationException(
+                              $"Cannot set the name on a file-backed Script object. The script is backed by the file ({filePath})");
+                }
+
+                name = value;
+            }
+        }
+
+        /// <summary>
+        ///     Gets or sets the ordinal.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">
+        ///     If an attempt is made to set the ordinal when the ordinal is pulled from the FilePath.
+        /// </exception>
+        public long Ordinal
+        {
+            get { return ordinal; }
+            set
+            {
+                if (filePath != null)
+                {
+                    throw new InvalidOperationException(
+                              $"Cannot set the ordinal on a file-backed Script object. The script is backed by the file ({filePath})");
+                }
+
+                ordinal = value;
+            }
+        }
+
+        /// <summary>
+        ///     Sets the text of the script and automatically updates the Variables, Subsets, Database,
+        ///     Timeout, and Warning fields are automatically refreshed
         /// </summary>
         public string Text
         {
             set
             {
-                _text = value;
+                text = value;
                 RefreshMetadata();
             }
         }
 
+        /// <summary>
+        ///     Returns the variables within the script.
+        /// </summary>
         public IEnumerable<string> Variables { get; private set; }
 
+        /// <summary>Returns the Database metatag of the Script, if there is one.</summary>
+        /// <param name="variableMapping">The variable mapping.</param>
+        /// <returns>The Database to run the script against.</returns>
         public string GetDatabase(Dictionary<string, string> variableMapping = null)
         {
-            if (_database == null)
+            if (database == null)
                 return null;
 
             if (variableMapping != null)
-                return variableMapping[_database.TrimStart('<').TrimEnd('>')] ?? _database;
+                return variableMapping[database.TrimStart('<').TrimEnd('>')] ?? database;
 
-            return _database;
-        }
-
-        public IEnumerable<string> GetSubsets(Dictionary<string, string> variableMapping = null)
-        {
-            if (_subsets == null)
-                return new List<string>();
-
-            if (variableMapping != null)
-                return _subsets.Select(s => variableMapping[s.TrimStart('<').TrimEnd('>')] ?? s);
-
-            return _subsets;
+            return database;
         }
 
         /// <summary>
-        /// Returns the text of the script. If a variable mapping is passed in, any variables in the
-        /// text will be replaced by their mapped value
+        /// </summary>
+        /// <param name="variableMapping"></param>
+        /// <returns></returns>
+        public IEnumerable<string> GetSubsets(Dictionary<string, string> variableMapping = null)
+        {
+            if (subsets == null)
+                return new List<string>();
+
+            if (variableMapping != null)
+                return subsets.Select(s => variableMapping[s.TrimStart('<').TrimEnd('>')] ?? s);
+
+            return subsets;
+        }
+
+        /// <summary>
         /// </summary>
         /// <param name="variableMapping"></param>
         /// <returns></returns>
         public string GetText(Dictionary<string, string> variableMapping = null)
         {
-            if (_text == null)
+            if (text == null)
                 return null;
 
-            StringBuilder returnText = new StringBuilder(_text);
+            var returnText = new StringBuilder(text);
             if (variableMapping != null)
             {
                 var missing = Variables.Except(variableMapping.Keys).ToList();
                 if (missing.Any())
-                    throw new ArgumentException($"Missing variables: {missing.Aggregate("", (c, n) => c + n + ", ").TrimEnd(' ', ',')}");
+                {
+                    throw new ArgumentException(
+                              $"Missing variables: {missing.Aggregate(string.Empty, (c, n) => c + n + ", ").TrimEnd(' ', ',')}");
+                }
 
                 foreach (var v in variableMapping)
-                {
                     returnText.Replace($"<<{v.Key}>>", v.Value);
-                }
             }
 
             return returnText.ToString();
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="variableMapping"></param>
+        /// <returns></returns>
         public int GetTimeout(Dictionary<string, string> variableMapping = null)
         {
-            if (_timeout == null)
+            if (timeout == null)
                 return 6000;
 
-            string mappedTime = _timeout;
+            var mappedTime = timeout;
             if (variableMapping != null)
-                mappedTime = variableMapping[_timeout.TrimStart('<').TrimEnd('>')] ?? _timeout;
+                mappedTime = variableMapping[timeout.TrimStart('<').TrimEnd('>')] ?? timeout;
 
             int time;
             if (!int.TryParse(mappedTime, out time))
@@ -171,33 +208,40 @@ namespace SQLr
             return time;
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="variableMapping"></param>
+        /// <returns></returns>
         public string GetWarning(Dictionary<string, string> variableMapping = null)
         {
-            if (_warning == null)
+            if (warning == null)
                 return null;
 
             if (variableMapping != null)
-                return variableMapping[_warning.TrimStart('<').TrimEnd('>')] ?? _warning;
+                return variableMapping[warning.TrimStart('<').TrimEnd('>')] ?? warning;
 
-            return _warning;
+            return warning;
         }
 
+        /// <summary>
+        ///     Causes the content of the file in the FilePath to be re-read to the Text field.
+        /// </summary>
         public void RereadFile()
         {
-            Text = File.ReadAllText(_filePath);
+            Text = File.ReadAllText(filePath);
         }
 
         private void RefreshMetadata()
         {
-            Variables = ScriptUtility.LoadMultiTag(_text, @"<<(\w+?)>>").Distinct();
+            Variables = ScriptUtility.LoadMultiTag(text, @"<<(\w+?)>>").Distinct();
 
-            _subsets = ScriptUtility.LoadMultiTag(_text, @"{{Subset=([\w<>]+?)}}").ToList();
+            subsets = ScriptUtility.LoadMultiTag(text, @"{{Subset=([\w<>]+?)}}").ToList();
 
-            _timeout = ScriptUtility.LoadTag(_text, @"{{Timeout=([\w<>]+?)}}") ?? "6000";
+            timeout = ScriptUtility.LoadTag(text, @"{{Timeout=([\w<>]+?)}}") ?? "6000";
 
-            _warning = ScriptUtility.LoadTag(_text, @"{{Warning=(.+?)}}");
+            warning = ScriptUtility.LoadTag(text, @"{{Warning=(.+?)}}");
 
-            _database = ScriptUtility.LoadTag(_text, @"{{Database=(.+?)}}");
+            database = ScriptUtility.LoadTag(text, @"{{Database=(.+?)}}");
         }
     }
 }

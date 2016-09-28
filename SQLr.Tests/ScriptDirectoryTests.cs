@@ -1,86 +1,130 @@
-﻿using NUnit.Framework;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
+﻿// --------------------------------------------------------------------------------------------------------------------
+// SQLr - SQLr.Tests - ScriptDirectoryTests.cs
+// <Author></Author>
+// <CreatedDate>2016-09-23</CreatedDate>
+// <LastEditDate>2016-09-27</LastEditDate>
+// <summary>
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 namespace SQLr.Tests
 {
+    #region using
+
+    using System;
+    using System.IO;
+    using System.Linq;
+    using System.Threading;
+    using NUnit.Framework;
+
+    #endregion
+
     [TestFixture]
     public class ScriptDirectoryTests
     {
-        private const int waitPeriod = 100;
+        private const int WaitPeriod = 100;
 
-        private static int _testNumber = 1234;
+        private static int testNumber = 1234;
 
-        private string _directory;
+        private string directory;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            directory = Path.Combine(Path.GetTempPath(), "ScriptDirectoryTestFolder");
+            Directory.CreateDirectory(directory);
+        }
+
+        [SetUp]
+        public void Setup()
+        {
+            var files = Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories);
+            foreach (var file in files)
+                File.Delete(file);
+        }
+
+        [OneTimeTearDown]
+        [Timeout(5000)]
+        public void OneTimeTearDown()
+        {
+            while (Directory.Exists(directory))
+            {
+                try
+                {
+                    Directory.Delete(directory, true);
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+            }
+        }
 
         [Test]
-        public void Added_Script_File_Automatically_Drawn_Into_ScriptDirectory()
+        public void AddedScriptFileAutomaticallyDrawnIntoScriptDirectory()
         {
-            var scriptDirectory = new ScriptDirectory(_directory, false);
+            var scriptDirectory = new ScriptDirectory(directory, false);
 
-            var filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile1.sql");
+            var filePath = Path.Combine(directory, $"_{++testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "A Test File 1");
 
-            Thread.Sleep(waitPeriod);
+            Thread.Sleep(WaitPeriod);
 
             Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(1));
         }
 
         [Test]
-        public void Changed_Script_Files_Automatically_Get_Updated_In_ScriptDirectory()
+        public void ChangedScriptFilesAutomaticallyGetUpdatedInScriptDirectory()
         {
-            var filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile1.sql");
+            var filePath = Path.Combine(directory, $"_{++testNumber}_TestFile1.sql");
             var warning = "A Warning Message";
             File.WriteAllText(filePath, $@"{{{{Warning={warning}}}}}");
 
-            var scriptDirectory = new ScriptDirectory(_directory, false);
+            var scriptDirectory = new ScriptDirectory(directory, false);
 
             Assume.That(scriptDirectory.Scripts.First().GetWarning(), Is.EqualTo(warning));
 
             var newWarning = "A New Warning Message";
             File.WriteAllText(filePath, $@"{{{{Warning={newWarning}}}}}");
 
-            Thread.Sleep(waitPeriod);
+            Thread.Sleep(WaitPeriod);
 
             Assert.That(scriptDirectory.Scripts.First().GetWarning(), Is.EqualTo(newWarning));
         }
 
         [Test]
-        public void Creating_ScriptDirectory_Draws_In_All_Script_Files()
+        public void CreatingScriptDirectoryDrawsInAllScriptFiles()
         {
-            var filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile1.sql");
+            var filePath = Path.Combine(directory, $"_{++testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "A Test File 1");
-            filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile2.sql");
+            filePath = Path.Combine(directory, $"_{++testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "A Test File 2");
-            filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile3.sql");
+            filePath = Path.Combine(directory, $"_{++testNumber}_TestFile3.sql");
             File.WriteAllText(filePath, "A Test File 3");
 
-            var scriptDirectory = new ScriptDirectory(_directory, false);
+            var scriptDirectory = new ScriptDirectory(directory, false);
 
             Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(3));
         }
 
         [Test]
-        public void Creating_ScriptDirectory_With_SubDirectories_Draws_In_All_Files()
+        public void CreatingScriptDirectoryWithSubDirectoriesDrawsInAllFiles()
         {
-            var subDirectoryA = Path.Combine(_directory, "SubDirectoryA");
+            var subDirectoryA = Path.Combine(directory, "SubDirectoryA");
             Directory.CreateDirectory(subDirectoryA);
 
-            var subDirectoryB = Path.Combine(_directory, "SubDirectoryB");
+            var subDirectoryB = Path.Combine(directory, "SubDirectoryB");
             Directory.CreateDirectory(subDirectoryB);
 
-            var filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile1.sql");
+            var filePath = Path.Combine(directory, $"_{++testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "A Test File 1");
 
-            filePath = Path.Combine(subDirectoryA, $"_{++_testNumber}_TestFile2.sql");
+            filePath = Path.Combine(subDirectoryA, $"_{++testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "A Test File 2");
 
-            filePath = Path.Combine(subDirectoryB, $"_{++_testNumber}_TestFile3.sql");
+            filePath = Path.Combine(subDirectoryB, $"_{++testNumber}_TestFile3.sql");
             File.WriteAllText(filePath, "A Test File 3");
 
-            var scriptDirectory = new ScriptDirectory(_directory, true);
+            var scriptDirectory = new ScriptDirectory(directory, true);
 
             Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(3));
 
@@ -89,100 +133,85 @@ namespace SQLr.Tests
         }
 
         [Test]
-        public void Files_With_Same_Name_In_Different_SubDirectories_Selected_By_Depth_Then_Alpha()
+        public void FilesWithSameNameInDifferentSubDirectoriesSelectedByDepthThenAlpha()
         {
-            var subDirectoryA = Path.Combine(_directory, "SubDirectoryA");
+            var subDirectoryA = Path.Combine(directory, "SubDirectoryA");
             Directory.CreateDirectory(subDirectoryA);
 
-            var subDirectoryB = Path.Combine(_directory, "SubDirectoryB");
+            var subDirectoryB = Path.Combine(directory, "SubDirectoryB");
             Directory.CreateDirectory(subDirectoryB);
 
-            var filePath = Path.Combine(_directory, $"_{_testNumber}_TestFile1.sql");
+            var filePath = Path.Combine(directory, $"_{testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "Test File 1 - MainDirectory");
 
-            filePath = Path.Combine(subDirectoryA, $"_{_testNumber}_TestFile1.sql");
+            filePath = Path.Combine(subDirectoryA, $"_{testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "Test File 1 - SubDirectoryA");
 
-            _testNumber++;
+            testNumber++;
 
-            filePath = Path.Combine(subDirectoryA, $"_{_testNumber}_TestFile2.sql");
+            filePath = Path.Combine(subDirectoryA, $"_{testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "Test File 2 - SubDirectoryA");
 
-            filePath = Path.Combine(subDirectoryB, $"_{_testNumber}_TestFile2.sql");
+            filePath = Path.Combine(subDirectoryB, $"_{testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "Test File 2 - SubDirectoryB");
 
-            var scriptDirectory = new ScriptDirectory(_directory, true);
+            var scriptDirectory = new ScriptDirectory(directory, true);
 
-            Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(2), "Only two files should be included since they have the same name");
+            Assert.That(
+                scriptDirectory.Scripts.Count,
+                Is.EqualTo(2),
+                "Only two files should be included since they have the same name");
 
             Directory.Delete(subDirectoryA, true);
             Directory.Delete(subDirectoryB, true);
         }
 
-        [OneTimeSetUp]
-        public void OneTimeSetUp()
-        {
-            _directory = Path.Combine(Path.GetTempPath(), "ScriptDirectoryTestFolder");
-            Directory.CreateDirectory(_directory);
-        }
-
-        [OneTimeTearDown]
-        public void OneTimeTearDown()
-        {
-            Directory.Delete(_directory, true);
-        }
-
         [Test]
-        public void Removed_Script_Files_Automatically_Removed_From_ScriptDirectory()
+        public void RemovedScriptFilesAutomaticallyRemovedFromScriptDirectory()
         {
-            var filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile1.sql");
+            var filePath = Path.Combine(directory, $"_{++testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "A Test File 1");
-            filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile2.sql");
+            filePath = Path.Combine(directory, $"_{++testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "A Test File 2");
 
-            var scriptDirectory = new ScriptDirectory(_directory, false);
+            var scriptDirectory = new ScriptDirectory(directory, false);
 
             File.Delete(filePath);
 
-            Thread.Sleep(waitPeriod);
+            Thread.Sleep(WaitPeriod);
 
             Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(1));
         }
 
         [Test]
-        public void Renamed_Script_Files_Automatically_Get_Renamed_In_ScriptDirectory()
+        public void RenamedScriptFilesAutomaticallyGetRenamedInScriptDirectory()
         {
-            var filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile1.sql");
+            var filePath = Path.Combine(directory, $"_{++testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "A Test File 1");
 
-            filePath = Path.Combine(_directory, $"_{++_testNumber}_TestFile2.sql");
+            filePath = Path.Combine(directory, $"_{++testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "A Test File 2");
 
-            var scriptDirectory = new ScriptDirectory(_directory, false);
+            var scriptDirectory = new ScriptDirectory(directory, false);
 
-            var newNumber = ++_testNumber;
+            var newNumber = ++testNumber;
             var newName = "newTestName";
-            var newFileName = Path.Combine(_directory, $"_{newNumber}_{newName}.sql");
+            var newFileName = Path.Combine(directory, $"_{newNumber}_{newName}.sql");
 
             Thread.Sleep(25);
 
             File.Move(filePath, newFileName);
 
-            Thread.Sleep(waitPeriod);
+            Thread.Sleep(WaitPeriod);
 
-            Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(2));
-            Assert.That(scriptDirectory.Scripts.FirstOrDefault(v => v.Name == newName), Is.Not.Null.And.Property("Ordinal").EqualTo(newNumber));
-        }
-
-        [SetUp]
-        public void Setup()
-        {
-            var files = Directory.EnumerateFiles(_directory, "*.*", SearchOption.AllDirectories);
-
-            foreach (var file in files)
-            {
-                File.Delete(file);
-            }
+            Assert.That(
+                scriptDirectory.Scripts.Count,
+                Is.EqualTo(2),
+                "Contents: {0}",
+                scriptDirectory.Scripts.Aggregate(string.Empty, (c, n) => c + n.FilePath + "; "));
+            Assert.That(
+                scriptDirectory.Scripts.FirstOrDefault(v => v.Name == newName),
+                Is.Not.Null.And.Property("Ordinal").EqualTo(newNumber));
         }
     }
 }

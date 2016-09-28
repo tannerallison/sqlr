@@ -1,12 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-
+﻿// --------------------------------------------------------------------------------------------------------------------
+// SQLr - SQLr - ScriptUtility.cs
+// <Author></Author>
+// <CreatedDate>2016-09-24</CreatedDate>
+// <LastEditDate>2016-09-27</LastEditDate>
+// <summary>
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 namespace SQLr
 {
+    #region using
+
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text.RegularExpressions;
+
+    #endregion
+
     public static class ScriptUtility
     {
         public static IEnumerable<string> LoadMultiTag(string text, string regex, int grouping = 1)
@@ -29,7 +38,7 @@ namespace SQLr
 
             var tag = (from Match match in matchCollection select match.Groups[1].Value).FirstOrDefault();
 
-            return tag?.Replace("--", "");
+            return tag?.Replace("--", string.Empty);
         }
     }
 }
