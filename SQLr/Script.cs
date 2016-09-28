@@ -18,7 +18,7 @@ namespace SQLr
 
     #endregion
 
-    public class Script
+    public class Script : IProcessStep
     {
         private string database;
         private string filePath;
@@ -113,6 +113,11 @@ namespace SQLr
 
                 ordinal = value;
             }
+        }
+
+        public void HasChanges()
+        {
+            RereadFile();
         }
 
         /// <summary>

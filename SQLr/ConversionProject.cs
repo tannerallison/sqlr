@@ -21,15 +21,15 @@ namespace SQLr
 
         public ConversionProject()
         {
-            scripts = new HashSet<Script>(new ScriptComparer());
-            ScriptDirectories = new List<ScriptDirectory>();
+            scripts = new HashSet<Script>(new StepComparer());
+            ScriptDirectories = new List<ProcessStepDirectory>();
         }
 
         /// <summary>
-        ///     An ordered list of directories that contain scripts. Scripts with the same file name in
+        ///     An ordered list of directories that contain scripts. Steps with the same file name in
         ///     later ScriptDirectories will overwrite prior scripts.
         /// </summary>
-        public List<ScriptDirectory> ScriptDirectories { get; }
+        public List<ProcessStepDirectory> ScriptDirectories { get; }
 
         /// <summary>
         ///     Cycles through all the script directories that have changes and retrieves the changes.
@@ -43,7 +43,7 @@ namespace SQLr
             {
                 foreach (var t in ScriptDirectories)
                 {
-                    foreach (var s in t.Scripts)
+                    foreach (var s in t.Steps.OfType<Script>())
                     {
                         if (scripts.Add(s))
                             continue;
@@ -55,16 +55,6 @@ namespace SQLr
             }
 
             return scripts.OrderBy(v => v.Ordinal).ToList();
-        }
-
-        private class ScriptComparer : IEqualityComparer<Script>
-        {
-            public bool Equals(Script one, Script two)
-            {
-                return (one.Ordinal == two.Ordinal) && (one.Name == two.Name);
-            }
-
-            public int GetHashCode(Script item) { return (item.Name + item.Ordinal).GetHashCode(); }
         }
     }
 }

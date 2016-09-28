@@ -72,8 +72,8 @@ namespace SQLr.Tests
             var filePathB = Path.Combine(subDirectoryB, $"_{++testNumber}_TestFile2.sql");
             File.WriteAllText(filePathB, "Test File 2 - SubDirectoryB");
 
-            var scriptDirA = new ScriptDirectory(subDirectoryA, false);
-            var scriptDirB = new ScriptDirectory(subDirectoryB, false);
+            var scriptDirA = new ProcessStepDirectory(subDirectoryA, "*.sql", false);
+            var scriptDirB = new ProcessStepDirectory(subDirectoryB, "*.sql", false);
 
             var proj = new ConversionProject();
             proj.ScriptDirectories.Add(scriptDirA);
@@ -92,7 +92,7 @@ namespace SQLr.Tests
             var filePath = Path.Combine(directory, $"_{++testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "A Test File 1");
 
-            var scriptDir = new ScriptDirectory(directory, false);
+            var scriptDir = new ProcessStepDirectory(directory, "*.sql", false);
 
             var proj = new ConversionProject();
             proj.ScriptDirectories.Add(scriptDir);
@@ -116,11 +116,11 @@ namespace SQLr.Tests
             var filePathB = Path.Combine(subDirectoryB, $"_{++testNumber}_TestFile2.sql");
             File.WriteAllText(filePathB, "Test File 2 - SubDirectoryB");
 
-            var scriptDirA = new ScriptDirectory(subDirectoryA, false);
-            var scriptDirB = new ScriptDirectory(subDirectoryB, false);
+            var scriptDirA = new ProcessStepDirectory(subDirectoryA, "*.sql", false);
+            var scriptDirB = new ProcessStepDirectory(subDirectoryB, "*.sql", false);
 
-            Assume.That(scriptDirA.Scripts.Count, Is.EqualTo(1));
-            Assume.That(scriptDirB.Scripts.Count, Is.EqualTo(2));
+            Assert.That(scriptDirA.Steps.Count, Is.EqualTo(1), "ScriptDirA should have one file");
+            Assert.That(scriptDirB.Steps.Count, Is.EqualTo(2), "ScriptDirB should have two file");
 
             var proj = new ConversionProject();
             proj.ScriptDirectories.Add(scriptDirA);

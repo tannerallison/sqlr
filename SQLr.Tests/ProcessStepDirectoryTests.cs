@@ -1,5 +1,5 @@
 ﻿// --------------------------------------------------------------------------------------------------------------------
-// SQLr - SQLr.Tests - ScriptDirectoryTests.cs
+// SQLr - SQLr.Tests - ProcessStepDirectoryTests.cs
 // <Author></Author>
 // <CreatedDate>2016-09-23</CreatedDate>
 // <LastEditDate>2016-09-27</LastEditDate>
@@ -19,7 +19,7 @@ namespace SQLr.Tests
     #endregion
 
     [TestFixture]
-    public class ScriptDirectoryTests
+    public class ProcessStepDirectoryTests
     {
         private const int WaitPeriod = 100;
 
@@ -62,14 +62,14 @@ namespace SQLr.Tests
         [Test]
         public void AddedScriptFileAutomaticallyDrawnIntoScriptDirectory()
         {
-            var scriptDirectory = new ScriptDirectory(directory, false);
+            var scriptDirectory = new ProcessStepDirectory(directory, "*.sql", false);
 
             var filePath = Path.Combine(directory, $"_{++testNumber}_TestFile1.sql");
             File.WriteAllText(filePath, "A Test File 1");
 
             Thread.Sleep(WaitPeriod);
 
-            Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(1));
+            Assert.That(scriptDirectory.Steps.Count, Is.EqualTo(1));
         }
 
         [Test]
@@ -79,16 +79,16 @@ namespace SQLr.Tests
             var warning = "A Warning Message";
             File.WriteAllText(filePath, $@"{{{{Warning={warning}}}}}");
 
-            var scriptDirectory = new ScriptDirectory(directory, false);
+            var scriptDirectory = new ProcessStepDirectory(directory, "*.sql", false);
 
-            Assume.That(scriptDirectory.Scripts.First().GetWarning(), Is.EqualTo(warning));
+            Assume.That(scriptDirectory.Steps.OfType<Script>().First().GetWarning(), Is.EqualTo(warning));
 
             var newWarning = "A New Warning Message";
             File.WriteAllText(filePath, $@"{{{{Warning={newWarning}}}}}");
 
             Thread.Sleep(WaitPeriod);
 
-            Assert.That(scriptDirectory.Scripts.First().GetWarning(), Is.EqualTo(newWarning));
+            Assert.That(scriptDirectory.Steps.OfType<Script>().First().GetWarning(), Is.EqualTo(newWarning));
         }
 
         [Test]
@@ -101,9 +101,9 @@ namespace SQLr.Tests
             filePath = Path.Combine(directory, $"_{++testNumber}_TestFile3.sql");
             File.WriteAllText(filePath, "A Test File 3");
 
-            var scriptDirectory = new ScriptDirectory(directory, false);
+            var scriptDirectory = new ProcessStepDirectory(directory, "*.sql", false);
 
-            Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(3));
+            Assert.That(scriptDirectory.Steps.Count, Is.EqualTo(3));
         }
 
         [Test]
@@ -124,9 +124,9 @@ namespace SQLr.Tests
             filePath = Path.Combine(subDirectoryB, $"_{++testNumber}_TestFile3.sql");
             File.WriteAllText(filePath, "A Test File 3");
 
-            var scriptDirectory = new ScriptDirectory(directory, true);
+            var scriptDirectory = new ProcessStepDirectory(directory, "*.sql", true);
 
-            Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(3));
+            Assert.That(scriptDirectory.Steps.Count, Is.EqualTo(3));
 
             Directory.Delete(subDirectoryA, true);
             Directory.Delete(subDirectoryB, true);
@@ -155,10 +155,10 @@ namespace SQLr.Tests
             filePath = Path.Combine(subDirectoryB, $"_{testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "Test File 2 - SubDirectoryB");
 
-            var scriptDirectory = new ScriptDirectory(directory, true);
+            var scriptDirectory = new ProcessStepDirectory(directory, "*.sql", true);
 
             Assert.That(
-                scriptDirectory.Scripts.Count,
+                scriptDirectory.Steps.Count,
                 Is.EqualTo(2),
                 "Only two files should be included since they have the same name");
 
@@ -174,13 +174,13 @@ namespace SQLr.Tests
             filePath = Path.Combine(directory, $"_{++testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "A Test File 2");
 
-            var scriptDirectory = new ScriptDirectory(directory, false);
+            var scriptDirectory = new ProcessStepDirectory(directory, "*.sql", false);
 
             File.Delete(filePath);
 
             Thread.Sleep(WaitPeriod);
 
-            Assert.That(scriptDirectory.Scripts.Count, Is.EqualTo(1));
+            Assert.That(scriptDirectory.Steps.Count, Is.EqualTo(1));
         }
 
         [Test]
@@ -192,7 +192,7 @@ namespace SQLr.Tests
             filePath = Path.Combine(directory, $"_{++testNumber}_TestFile2.sql");
             File.WriteAllText(filePath, "A Test File 2");
 
-            var scriptDirectory = new ScriptDirectory(directory, false);
+            var scriptDirectory = new ProcessStepDirectory(directory, "*.sql", false);
 
             var newNumber = ++testNumber;
             var newName = "newTestName";
@@ -205,12 +205,12 @@ namespace SQLr.Tests
             Thread.Sleep(WaitPeriod);
 
             Assert.That(
-                scriptDirectory.Scripts.Count,
+                scriptDirectory.Steps.Count,
                 Is.EqualTo(2),
                 "Contents: {0}",
-                scriptDirectory.Scripts.Aggregate(string.Empty, (c, n) => c + n.FilePath + "; "));
+                scriptDirectory.Steps.Aggregate(string.Empty, (c, n) => c + n.FilePath + "; "));
             Assert.That(
-                scriptDirectory.Scripts.FirstOrDefault(v => v.Name == newName),
+                scriptDirectory.Steps.FirstOrDefault(v => v.Name == newName),
                 Is.Not.Null.And.Property("Ordinal").EqualTo(newNumber));
         }
     }
