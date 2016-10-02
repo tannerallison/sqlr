@@ -15,6 +15,7 @@ namespace SQLr.Tests
     using System.Linq;
     using System.Threading;
     using NUnit.Framework;
+    using SQLr.ProcessStep;
 
     #endregion
 

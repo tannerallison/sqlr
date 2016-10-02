@@ -1,27 +1,28 @@
 ﻿// --------------------------------------------------------------------------------------------------------------------
-// SQLr - SQLr - StepComparer.cs
+// SQLr - SQLr - HashSetExtensions.cs
 // <Author></Author>
-// <CreatedDate>2016-09-27</CreatedDate>
+// <CreatedDate>2016-10-01</CreatedDate>
 // <LastEditDate>2016-10-01</LastEditDate>
 // <summary>
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
-namespace SQLr
+namespace SQLr.Utilities
 {
     #region using
 
     using System.Collections.Generic;
-    using SQLr.ProcessStep;
 
     #endregion
 
-    public class StepComparer : IEqualityComparer<IProcessStep>
+    public static class HashSetExtensions
     {
-        public bool Equals(IProcessStep one, IProcessStep two)
+        public static void AddOrReplace<T>(this HashSet<T> hashSet, T item)
         {
-            return (one.Ordinal == two.Ordinal) && (one.Name == two.Name);
-        }
+            if (hashSet.Add(item))
+                return;
 
-        public int GetHashCode(IProcessStep item) { return (item.Name + item.Ordinal).GetHashCode(); }
+            hashSet.Remove(item);
+            hashSet.Add(item);
+        }
     }
 }

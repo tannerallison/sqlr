@@ -2,7 +2,7 @@
 // SQLr - SQLr - ConversionProject.cs
 // <Author></Author>
 // <CreatedDate>2016-09-23</CreatedDate>
-// <LastEditDate>2016-09-27</LastEditDate>
+// <LastEditDate>2016-10-01</LastEditDate>
 // <summary>
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
@@ -12,49 +12,45 @@ namespace SQLr
 
     using System.Collections.Generic;
     using System.Linq;
+    using SQLr.ProcessStep;
+    using SQLr.Utilities;
 
     #endregion
 
     public class ConversionProject
     {
-        private readonly HashSet<Script> scripts;
+        private readonly HashSet<IProcessStep> steps;
 
         public ConversionProject()
         {
-            scripts = new HashSet<Script>(new StepComparer());
-            ScriptDirectories = new List<ProcessStepDirectory>();
+            steps = new HashSet<IProcessStep>(new StepComparer());
+            StepDirectories = new List<ProcessStepDirectory>();
         }
 
         /// <summary>
-        ///     An ordered list of directories that contain scripts. Steps with the same file name in
-        ///     later ScriptDirectories will overwrite prior scripts.
+        ///     An ordered list of directories that contain steps. Steps with the same file name in
+        ///     later StepDirectories will overwrite prior steps.
         /// </summary>
-        public List<ProcessStepDirectory> ScriptDirectories { get; }
+        public List<ProcessStepDirectory> StepDirectories { get; }
 
         /// <summary>
         ///     Cycles through all the script directories that have changes and retrieves the changes.
         /// </summary>
         /// <returns>
-        ///     The list of scripts within the ScriptDirectories.
+        ///     The list of steps within the StepDirectories.
         /// </returns>
-        public List<Script> GetScripts()
+        public List<IProcessStep> GetSteps()
         {
-            if ((scripts.Count == 0) || ScriptDirectories.Any(v => v.IsDirty))
+            if ((steps.Count == 0) || StepDirectories.Any(v => v.IsDirty))
             {
-                foreach (var t in ScriptDirectories)
+                for (var i = 0; i < StepDirectories.Count; i++)
                 {
-                    foreach (var s in t.Steps.OfType<Script>())
-                    {
-                        if (scripts.Add(s))
-                            continue;
-
-                        scripts.Remove(s);
-                        scripts.Add(s);
-                    }
+                    var t = StepDirectories[i];
+                    t.Steps.ForEach(v => steps.AddOrReplace(v));
                 }
             }
 
-            return scripts.OrderBy(v => v.Ordinal).ToList();
+            return steps.OrderBy(v => v.Ordinal).ToList();
         }
     }
 }

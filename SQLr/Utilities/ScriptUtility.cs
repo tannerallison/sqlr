@@ -1,12 +1,12 @@
 ﻿// --------------------------------------------------------------------------------------------------------------------
 // SQLr - SQLr - ScriptUtility.cs
 // <Author></Author>
-// <CreatedDate>2016-09-24</CreatedDate>
-// <LastEditDate>2016-09-27</LastEditDate>
+// <CreatedDate>2016-10-01</CreatedDate>
+// <LastEditDate>2016-10-01</LastEditDate>
 // <summary>
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
-namespace SQLr
+namespace SQLr.Utilities
 {
     #region using
 

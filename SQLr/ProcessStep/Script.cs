@@ -1,12 +1,12 @@
 ﻿// --------------------------------------------------------------------------------------------------------------------
 // SQLr - SQLr - Script.cs
 // <Author></Author>
-// <CreatedDate>2016-09-23</CreatedDate>
-// <LastEditDate>2016-09-27</LastEditDate>
+// <CreatedDate>2016-09-28</CreatedDate>
+// <LastEditDate>2016-10-01</LastEditDate>
 // <summary>
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
-namespace SQLr
+namespace SQLr.ProcessStep
 {
     #region using
 
@@ -15,6 +15,7 @@ namespace SQLr
     using System.IO;
     using System.Linq;
     using System.Text;
+    using SQLr.Utilities;
 
     #endregion
 
@@ -113,11 +114,6 @@ namespace SQLr
 
                 ordinal = value;
             }
-        }
-
-        public void HasChanges()
-        {
-            RereadFile();
         }
 
         /// <summary>
@@ -227,6 +223,8 @@ namespace SQLr
 
             return warning;
         }
+
+        public void HasChanges() { RereadFile(); }
 
         /// <summary>
         ///     Causes the content of the file in the FilePath to be re-read to the Text field.

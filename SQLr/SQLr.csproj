@@ -42,15 +42,19 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="ConversionProject.cs" />
-    <Compile Include="IProcessStep.cs" />
-    <Compile Include="Script.cs" />
+    <Compile Include="ProcessStepExecutor\IProcessStepExecutor.cs" />
+    <Compile Include="ProcessStepExecutor\ScriptExecutor.cs" />
+    <Compile Include="ProcessStep\IProcessStep.cs" />
+    <Compile Include="ProcessStep\Script.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ProcessStepDirectory.cs" />
     <Compile Include="ScriptListRunner.cs" />
-    <Compile Include="ScriptUtility.cs" />
+    <Compile Include="Utilities\ScriptUtility.cs" />
     <Compile Include="SqlQueryRunner.cs" />
     <Compile Include="StepComparer.cs" />
+    <Compile Include="Utilities\HashSetExtensions.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

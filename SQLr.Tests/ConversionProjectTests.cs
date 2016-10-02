@@ -76,10 +76,10 @@ namespace SQLr.Tests
             var scriptDirB = new ProcessStepDirectory(subDirectoryB, "*.sql", false);
 
             var proj = new ConversionProject();
-            proj.ScriptDirectories.Add(scriptDirA);
-            proj.ScriptDirectories.Add(scriptDirB);
+            proj.StepDirectories.Add(scriptDirA);
+            proj.StepDirectories.Add(scriptDirB);
 
-            var scripts = proj.GetScripts();
+            var scripts = proj.GetSteps();
 
             Assert.That(scripts, Has.Count.EqualTo(2));
             Assert.That(scripts.FirstOrDefault(v => v.FilePath == filePathA), Is.Not.Null);
@@ -95,9 +95,9 @@ namespace SQLr.Tests
             var scriptDir = new ProcessStepDirectory(directory, "*.sql", false);
 
             var proj = new ConversionProject();
-            proj.ScriptDirectories.Add(scriptDir);
+            proj.StepDirectories.Add(scriptDir);
 
-            var scripts = proj.GetScripts();
+            var scripts = proj.GetSteps();
             Assert.That(scripts, Has.Count.EqualTo(1));
             Assert.That(scripts.FirstOrDefault(v => v.FilePath == filePath), Is.Not.Null);
         }
@@ -123,10 +123,10 @@ namespace SQLr.Tests
             Assert.That(scriptDirB.Steps.Count, Is.EqualTo(2), "ScriptDirB should have two file");
 
             var proj = new ConversionProject();
-            proj.ScriptDirectories.Add(scriptDirA);
-            proj.ScriptDirectories.Add(scriptDirB);
+            proj.StepDirectories.Add(scriptDirA);
+            proj.StepDirectories.Add(scriptDirB);
 
-            var scripts = proj.GetScripts();
+            var scripts = proj.GetSteps();
 
             Assert.That(
                 scripts,

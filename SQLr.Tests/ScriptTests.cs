@@ -13,6 +13,7 @@ namespace SQLr.Tests
     using System.Collections.Generic;
     using System.IO;
     using NUnit.Framework;
+    using SQLr.ProcessStep;
 
     #endregion
 

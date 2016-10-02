@@ -2,7 +2,7 @@
 // SQLr - SQLr - ProcessStepDirectory.cs
 // <Author></Author>
 // <CreatedDate>2016-09-23</CreatedDate>
-// <LastEditDate>2016-09-27</LastEditDate>
+// <LastEditDate>2016-10-01</LastEditDate>
 // <summary>
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
@@ -14,6 +14,7 @@ namespace SQLr
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using SQLr.ProcessStep;
 
     #endregion
 
